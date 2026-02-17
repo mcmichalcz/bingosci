@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Bingo 4×4</title>
+  <style>
+    :root{--bg:#f7f7fb;--card:#ffffff;--accent:#1f6feb;--accent-contrast:#fff;--muted:#666}
+    *{box-sizing:border-box}
+    body{font-family:Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif;margin:20px;background:var(--bg);color:#0b1220}
+    .container{max-width:900px;margin:0 auto}
+    header{display:flex;align-items:center;gap:16px;margin-bottom:18px}
+    h1{font-size:20px;margin:0}
+    p.lead{margin:0;color:var(--muted)}
+
+    .controls{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+    textarea{width:420px;min-height:140px;padding:10px;border-radius:8px;border:1px solid #e0e6ef;background:var(--card);resize:vertical}
+    .side{display:flex;flex-direction:column;gap:8px}
+    .btn{display:inline-block;padding:10px 14px;border-radius:8px;border:0;background:var(--accent);color:var(--accent-contrast);cursor:pointer;font-weight:600}
+    .btn.secondary{background:transparent;color:var(--accent);border:1px solid rgba(31,111,235,0.15)}
+    .small{font-size:13px;padding:8px 10px}
+
+    .board-wrap{background:var(--card);padding:14px;border-radius:12px;box-shadow:0 6px 18px rgba(13,38,76,0.06)}
+    .board{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;width:min(720px,100%)}
+    .cell{background:#fbfdff;border-radius:10px;padding:16px;min-height:80px;display:flex;align-items:center;justify-content:center;text-align:center;cursor:pointer;border:1px solid rgba(15,23,42,0.04);user-select:none}
+    .cell:hover{transform:translateY(-2px);transition:all .12s}
+    .cell.selected{background:linear-gradient(180deg,var(--accent),#1257c9);color:var(--accent-contrast);box-shadow:0 6px 16px rgba(31,111,235,0.18);transform:none}
+    .cell .text{padding:6px;font-size:14px}
+    .meta{margin-top:12px;color:var(--muted);font-size:13px}
+
+    @media (max-width:720px){
+      textarea{width:100%}
+      .controls{flex-direction:column}
+      .board{gap:8px}
+      .cell{min-height:64px;padding:12px}
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div>
+        <h1>Bingo 4×4</h1>
+        <p class="lead">Vytvoř si bingo ze seznamu věcí. Napiš jednu položku na řádek. U vybraného učitele lze přidat nebo odebrat řádky, poté klikni na vytvořit bingo. </p>
+      </div>
+    </header>
+
+    <div class="controls">
+      <div class="side">
+        <button class="btn secondary small" id="setList1">Liška</button>
+        <button class="btn secondary small" id="setList2">Fuchs</button>
+      </div>
+      <textarea id="itemsInput" aria-label="Seznam položek" placeholder="Napiš jednu položku na řádek. Může jich být více než 16 — při vytvoření se náhodně vybere 16 položek.">
+Vyber si učitele, nebo přidej řádky ručně (tento případně smaž)
+</textarea>
+
+      <div class="side">
+        <button class="btn" id="createBtn">Vytvořit bingo</button>
+        <button class="btn secondary small" id="shuffleBtn">Přegenerovat (jen zamíchat)</button>
+        <button class="btn secondary small" id="clearBtn">Vyčistit výběry</button>
+        <button class="btn secondary small" id="loadCookieBtn">Načíst bingo z cookies</button>
+        <button class="btn secondary small" id="saveCookieBtn">Uložit bingo do cookies</button>
+        <div class="meta">Počet položek v seznamu: <span id="count">0</span></div>
+      </div>
+    </div>
+
+    <div class="board-wrap">
+      <div id="board" class="board" role="grid" aria-label="Bingo 4x4"></div>
+      <div class="meta">Klikni na políčko pro zvýraznění / odznačení.</div>
+    </div>
+  </div>
+
+  <script>
+const setList1Btn = document.getElementById('setList1')
+const setList2Btn = document.getElementById('setList2')
+
+setList1Btn.addEventListener('click', ()=>{
+  itemsInput.value = 
+`"Smutný příběh"
+Liška přijde včas
+Liška přijde pozdě
+"Máme ještě X minut, to stihneme jeden příklad"
+TESÁČEK
+"Čili"
+Odbočení od tématu
+"Chce to někdo jít spočítat?"
+"To nám nepomůže"
+"... paní profesorka..."
+využití v praxi něčeho jinak nepoužitelného
+reference na jiného učitele
+"Tohle je podobné tomu předchozímu příkladu"
+"Tohle spočítám já"
+Liška se pochlubí kolik šachových úloh dnes vyřešil
+"Čili" řečeno už potřetí
+Někdo z fyziků dělá protokol
+"(Všechno) Dobrý?"
+"Je to smutné"
+"Pane Eis, ..."
+"Pane Černý, ..."
+Liška okomentuje čas svého příchodu`
+  countEl.textContent = parseList().length
+  createBingo()
+})
+
+setList2Btn.addEventListener('click', ()=>{
+  itemsInput.value =
+`"Je to tak banální, nebo opravdu přemýšlíte?"
+"Kdo to nevidí, nechť se nad sebou zamyslí."
+"Co myslíte, lehké nebo těžké?"
+Chaos na tabuli
+"Kdo mi do příště přinese [nějaká neřešitelná blbost], dostane A."
+Fuchs nedokončí důkaz
+Fuchs přijde pozdě
+"Tohle by zvládl žák zakladní školy."
+"Pokud u zkoušky nebude vědět [základní pojem], tak se s vámi dál bavit nebudu."
+"Co je to ekvivalence?"
+"Co je to relace?"
+Pokus o vtip
+Odbočka do teorie grafů
+Fuchs odmítá pojem "vzor"
+Fuchs kritizuje vzorečky do kombinatoriky
+Fuchs neslyší`
+  countEl.textContent = parseList().length
+  createBingo()
+})
+
+    let currentCells = [] // globální pole pro aktuální bingo
+
+    function shuffleArray(a){
+      for(let i=a.length-1;i>0;i--){
+        const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]
+      }
+      return a
+    }
+
+    const itemsInput = document.getElementById('itemsInput')
+    const createBtn = document.getElementById('createBtn')
+    const boardEl = document.getElementById('board')
+    const countEl = document.getElementById('count')
+    const shuffleBtn = document.getElementById('shuffleBtn')
+    const clearBtn = document.getElementById('clearBtn')
+    const loadCookieBtn = document.getElementById('loadCookieBtn')
+    const saveCookieBtn = document.getElementById('saveCookieBtn')
+
+    function parseList(){
+      const raw = itemsInput.value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean)
+      countEl.textContent = raw.length
+      return raw
+    }
+
+    function pick16(items){
+      if(items.length === 0) return Array(16).fill('')
+      const unique = items.slice()
+      shuffleArray(unique)
+      const out = []
+      let i = 0
+      while(out.length < 16){
+        out.push(unique[i % unique.length])
+        i++
+      }
+      return shuffleArray(out)
+    }
+
+    function escapeHtml(str){
+      if(!str) return ''
+      return str.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;')
+    }
+
+    function renderBoard(cells, selectedIndexes=[]){
+      boardEl.innerHTML = ''
+      cells.forEach((text, idx) => {
+        const div = document.createElement('button')
+        div.className = 'cell' + (selectedIndexes[idx] ? ' selected' : '')
+        div.setAttribute('role','gridcell')
+        div.setAttribute('aria-label', 'Bingo políčko ' + (idx+1))
+        div.innerHTML = `<div class="text">${escapeHtml(text)}</div>`
+        div.addEventListener('click', ()=>{
+          div.classList.toggle('selected')
+          const selectedNow = Array.from(boardEl.querySelectorAll('.cell')).map(el => el.classList.contains('selected'))
+          saveBoard(currentCells, selectedNow)
+        })
+        boardEl.appendChild(div)
+      })
+    }
+
+    function saveBoard(cells, selected){
+      if(!selected){
+        selected = Array.from(boardEl.querySelectorAll('.cell')).map(el => el.classList.contains('selected'))
+      }
+      const data = {cells, selected}
+      const str = encodeURIComponent(JSON.stringify(data))
+      document.cookie = 'bingoBoard=' + str + '; max-age=' + (3*60*60) + ';'
+    }
+
+    function loadBoard(){
+      const match = document.cookie.match(/(^|;)\s*bingoBoard=([^;]+)/)
+      if(!match) return false
+      try{
+        const data = JSON.parse(decodeURIComponent(match[2]))
+        if(!data.cells || data.cells.length !== 16){
+          return false
+        }
+        currentCells = data.cells
+        renderBoard(currentCells, data.selected || [])
+        return true
+      }catch(e){return false}
+    }
+
+    function createBingo(){
+      const list = parseList()
+      currentCells = pick16(list)
+      renderBoard(currentCells)
+      saveBoard(currentCells)
+    }
+
+    createBtn.addEventListener('click', createBingo)
+
+    shuffleBtn.addEventListener('click', ()=>{
+      if(currentCells.length !== 16) return
+      currentCells = shuffleArray(currentCells.slice())
+      renderBoard(currentCells)
+      saveBoard(currentCells)
+    })
+
+    clearBtn.addEventListener('click', ()=>{
+      boardEl.querySelectorAll('.cell.selected').forEach(el=>el.classList.remove('selected'))
+      const selectedNow = Array.from(boardEl.querySelectorAll('.cell')).map(el => el.classList.contains('selected'))
+      saveBoard(currentCells, selectedNow)
+    })
+
+    loadCookieBtn.addEventListener('click', ()=>{
+      if(!loadBoard()) alert('Žádné bingo v cookies nebo expirovalo.')
+    })
+
+    saveCookieBtn.addEventListener('click', ()=>{
+      const selectedNow = Array.from(boardEl.querySelectorAll('.cell')).map(el => el.classList.contains('selected'))
+      saveBoard(currentCells, selectedNow)
+      alert('Bingo bylo uloženo do cookies.')
+    })
+
+    (function init(){
+      countEl.textContent = parseList().length
+      if(!loadBoard()) createBingo()
+    })()
+
+    itemsInput.addEventListener('keydown', (e)=>{
+      if(e.key === 'Enter' && (e.ctrlKey || e.metaKey)){
+        createBingo(); e.preventDefault()
+      }
+    })
+  </script>
+</body>
+</html>
